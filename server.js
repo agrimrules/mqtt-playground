@@ -1,11 +1,18 @@
 var mosca = require('mosca');
-
-var settings = {
-    port: 1883,
-    persistence: mosca.persistence.Memory
+var creds = require('./private-config.json');
+var dbsubsettings = {
+    type: 'mongo',
+    url: creds.mongo_url,
+    pubsubCollection: 'mqtt',
+    mongo: {}
 };
 
-var server = new mosca.Server(settings, function() {
+var config = {
+    port: 1883,
+    backend: dbsubsettings
+};
+
+var server = new mosca.Server(config, function() {
     console.log('MQTT server is up and running')
 });
 
@@ -14,14 +21,12 @@ server.on('clientConnected', function(client) {
     console.log('client connected', client.id);
 });
 
-//when a message is received
-server.on('published', function(packet, client) {
-    console.log('Published : ', packet.payload);
-});
-
 //when the client subscribes to a topic
-server.on('subscribed', function(packet, client, cb) {
-    console.log('subscribed : ', topic);
+server.on('published', function(packet, client, cb) {
+if (packet.topic.indexOf('echo') === 0) {
+        return cb;
+}
+    console.log('subscribed : ', packet.topic);
     var newPacket = {
         topic: 'echo/' + packet.topic,
         payload: packet.payload,
